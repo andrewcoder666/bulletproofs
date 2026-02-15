@@ -1,6 +1,5 @@
 use rand_core::SeedableRng;
-
-use rand_chacha::ChaChaRng;
+use rand_chacha::ChaCha20Rng;
 
 use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::scalar::Scalar;
@@ -79,6 +78,13 @@ fn deserialize_and_verify() {
 
     let pc_gens = PedersenGens::default();
     let bp_gens = BulletproofGens::new(64, 8);
+    
+    let vc_valid: Vec<CompressedRistretto> = vc
+        .into_iter()
+        .map(|res| {
+            res.expect("Failed to parse CompressedRistretto from slice")
+        })
+        .collect();
 
     for i in 0..4 {
         for j in 0..4 {
@@ -87,7 +93,7 @@ fn deserialize_and_verify() {
                 .expect("Rangeproof deserialization failed");
             let mut transcript = Transcript::new(b"Deserialize-And-Verify Test");
             assert_eq!(
-                proof.verify_multiple(&bp_gens, &pc_gens, &mut transcript, &vc[0..m], n,),
+                proof.verify_multiple(&bp_gens, &pc_gens, &mut transcript, &vc_valid[0..m], n,),
                 Ok(())
             );
         }
@@ -105,7 +111,7 @@ fn generate_test_vectors() {
 
     // Use a deterministic RNG for proving, so the test vectors can be
     // generated reproducibly.
-    let mut test_rng = ChaChaRng::from_seed([24u8; 32]);
+    let mut test_rng = ChaCha20Rng::from_seed([24u8; 32]);
 
     let values = vec![0u64, 1, 2, 3, 4, 5, 6, 7];
     let blindings = (0..8)
