@@ -3,6 +3,7 @@
 use curve25519_dalek::scalar::Scalar;
 use std::iter::FromIterator;
 use std::ops::{Add, Mul, Neg, Sub};
+use std::collections::HashMap;
 
 /// Represents a variable in a constraint system.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -33,7 +34,7 @@ impl LinearCombination {
 
         let terms = self.get_terms();
         for (var, val) in terms {
-            *vars.entry(var).or_insert(Scalar::zero()) += val;
+            *vars.entry(var).or_insert(Scalar::ZERO) += val;
         }
 
         let mut new_lc_terms = vec![];
