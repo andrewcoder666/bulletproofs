@@ -126,6 +126,19 @@ impl<'t> ConstraintSystem for Verifier<'t> {
         // evals to 0 for prover, etc).
         self.constraints.push(lc);
     }
+
+    fn evaluate_lc(&self, _: &LinearCombination) -> Option<Scalar> {
+        None
+    }
+
+    fn allocate_single(&mut self, _: Option<Scalar>) -> Result<(Variable, Option<Variable>), R1CSError> {
+        let var = self.allocate(None)?;
+        match var {
+            Variable::MultiplierLeft(i) => Ok((Variable::MultiplierLeft(i), None)),
+            Variable::MultiplierRight(i) => Ok((Variable::MultiplierRight(i), Some(Variable::MultiplierOutput(i)))),
+            _ => Err(R1CSError::FormatError)
+        }
+    }
 }
 
 impl<'t> RandomizableConstraintSystem for Verifier<'t> {
@@ -170,6 +183,14 @@ impl<'t> ConstraintSystem for RandomizingVerifier<'t> {
 
     fn constrain(&mut self, lc: LinearCombination) {
         self.verifier.constrain(lc)
+    }
+
+    fn evaluate_lc(&self, _: &LinearCombination) -> Option<Scalar> {
+        None
+    }
+
+    fn allocate_single(&mut self, _: Option<Scalar>) -> Result<(Variable, Option<Variable>), R1CSError> {
+        self.verifier.allocate_single(None)
     }
 }
 
@@ -453,7 +474,11 @@ impl<'t> Verifier<'t> {
         let xxx = x * xx;
 
         // group the T_scalars and T_points together
-        let T_scalars = [r * x, rxx * x, rxx * xx, rxx * xxx, rxx * xx * xx];
+        let r_xxx = r * xxx;
+        let r_xxxx = r_xxx * x;
+        let r_xxxxx = r_xxxx * x;
+        let r_xxxxxx = r_xxxxx * x;
+        let T_scalars = [r * x, r_xxx, r_xxxx, r_xxxxx, r_xxxxxx];
         let T_points = [proof.T_1, proof.T_3, proof.T_4, proof.T_5, proof.T_6];
 
         let mega_check = RistrettoPoint::optional_multiscalar_mul(

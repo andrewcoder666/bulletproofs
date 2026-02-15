@@ -669,6 +669,8 @@ mod tests {
             (bincode::serialize(&proof).unwrap(), value_commitments)
         };
 
+        println!("proof byte size = {}", proof_bytes.len());
+
         // Verifier's scope
         {
             // 3. Deserialize
@@ -687,7 +689,7 @@ mod tests {
     fn create_and_verify_n_32_m_1() {
         singleparty_create_and_verify_helper(32, 1);
     }
-
+    
     #[test]
     fn create_and_verify_n_32_m_2() {
         singleparty_create_and_verify_helper(32, 2);

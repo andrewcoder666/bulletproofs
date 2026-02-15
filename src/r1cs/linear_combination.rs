@@ -5,7 +5,7 @@ use std::iter::FromIterator;
 use std::ops::{Add, Mul, Neg, Sub};
 
 /// Represents a variable in a constraint system.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Variable {
     /// Represents an external input specified by a commitment.
     Committed(usize),
@@ -17,6 +17,31 @@ pub enum Variable {
     MultiplierOutput(usize),
     /// Represents the constant 1.
     One(),
+}
+
+impl LinearCombination {
+    pub fn get_terms(self) -> Vec<(Variable, Scalar)> {
+        self.terms
+    }
+
+    /// Simplify linear combination by taking Variables common across terms and adding their corresponding scalars.
+    /// Useful when linear combinations become large. Takes ownership of linear combination as this function is useful
+    /// when memory is limited and the obvious action after this function call will be to free the memory held by the old linear combination
+    pub fn simplify(self) -> Self {
+        // Build hashmap to hold unique variables with their values.
+        let mut vars: HashMap<Variable, Scalar> = HashMap::new();
+
+        let terms = self.get_terms();
+        for (var, val) in terms {
+            *vars.entry(var).or_insert(Scalar::zero()) += val;
+        }
+
+        let mut new_lc_terms = vec![];
+        for (var, val) in vars {
+            new_lc_terms.push((var, val));
+        }
+        new_lc_terms.iter().collect()
+    }
 }
 
 impl From<Variable> for LinearCombination {

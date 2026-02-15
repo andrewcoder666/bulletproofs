@@ -167,6 +167,19 @@ impl<'t, 'g> ConstraintSystem for Prover<'t, 'g> {
         // (e.g. that variables are valid, that the linear combination evals to 0 for prover, etc).
         self.constraints.push(lc);
     }
+
+    fn evaluate_lc(&self, lc: &LinearCombination) -> Option<Scalar> {
+        Some(self.eval(lc))
+    }
+
+    fn allocate_single(&mut self, assignment: Option<Scalar>) -> Result<(Variable, Option<Variable>), R1CSError> {
+        let var = self.allocate(assignment)?;
+        match var {
+            Variable::MultiplierLeft(i) => Ok((Variable::MultiplierLeft(i), None)),
+            Variable::MultiplierRight(i) => Ok((Variable::MultiplierRight(i), Some(Variable::MultiplierOutput(i)))),
+            _ => Err(R1CSError::FormatError)
+        }
+    }
 }
 
 impl<'t, 'g> RandomizableConstraintSystem for Prover<'t, 'g> {
@@ -211,6 +224,14 @@ impl<'t, 'g> ConstraintSystem for RandomizingProver<'t, 'g> {
 
     fn constrain(&mut self, lc: LinearCombination) {
         self.prover.constrain(lc)
+    }
+
+    fn evaluate_lc(&self, lc: &LinearCombination) -> Option<Scalar> {
+        self.prover.evaluate_lc(lc)
+    }
+
+    fn allocate_single(&mut self, assignment: Option<Scalar>) -> Result<(Variable, Option<Variable>), R1CSError> {
+        self.prover.allocate_single(assignment)
     }
 }
 
@@ -695,5 +716,13 @@ impl<'t, 'g> Prover<'t, 'g> {
             e_blinding,
             ipp_proof,
         })
+    }
+
+    pub fn num_constraints(&self) -> usize {
+        self.constraints.len()
+    }
+
+    pub fn num_multipliers(&self) -> usize {
+        self.a_O.len()
     }
 }
