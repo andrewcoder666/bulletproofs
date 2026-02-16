@@ -687,9 +687,7 @@ impl<'t, 'g> Prover<'t, 'g> {
             r_vec,
         );
 
-        // We do not yet have a ClearOnDrop wrapper for Vec<Scalar>.
-        // When PR 202 [1] is merged, we can simply wrap s_L and s_R at the point of creation.
-        // [1] https://github.com/dalek-cryptography/curve25519-dalek/pull/202
+            // TODO: ClearOnDrop for Vec<Scalar> not yet available
         for scalar in s_L1
             .iter_mut()
             .chain(s_L2.iter_mut())

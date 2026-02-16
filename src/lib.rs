@@ -6,9 +6,16 @@ extern crate alloc;
 #[macro_use]
 extern crate serde_derive;
 
+// 恢复必要的模块
 mod util;
+mod ec_traits;
+mod secp256k1_impl;
 
-#[doc = include_str!("../docs/notes-intro.md")]
+// 移除临时的 curve25519_dalek 模块定义
+// 我们将在 generators.rs 中直接使用 secp256k1_impl
+
+// 启用 generators 模块
+mod generators;
 mod notes {
     #[doc = include_str!("../docs/notes-ipp.md")]
     mod inner_product_proof {}
@@ -19,7 +26,7 @@ mod notes {
 }
 
 mod errors;
-mod generators;
+// mod generators; // 避免重复定义
 mod inner_product_proof;
 mod linear_proof;
 mod range_proof;

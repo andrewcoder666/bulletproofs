@@ -10,8 +10,7 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 
-use curve25519_dalek::ristretto::RistrettoPoint;
-use curve25519_dalek::scalar::Scalar;
+use crate::secp256k1_impl::{AffinePoint, Scalar, PointCompression};
 use merlin::Transcript;
 
 use crate::errors::MPCError;
@@ -109,10 +108,10 @@ impl<'a, 'b> DealerAwaitingBitCommitments<'a, 'b> {
         }
 
         // Commit aggregated A_j, S_j
-        let A: RistrettoPoint = bit_commitments.iter().map(|vc| vc.A_j).sum();
+        let A: AffinePoint = bit_commitments.iter().map(|vc| vc.A_j).sum();
         self.transcript.append_point(b"A", &A.compress());
 
-        let S: RistrettoPoint = bit_commitments.iter().map(|vc| vc.S_j).sum();
+        let S: AffinePoint = bit_commitments.iter().map(|vc| vc.S_j).sum();
         self.transcript.append_point(b"S", &S.compress());
 
         let y = self.transcript.challenge_scalar(b"y");
@@ -149,9 +148,9 @@ pub struct DealerAwaitingPolyCommitments<'a, 'b> {
     bit_challenge: BitChallenge,
     bit_commitments: Vec<BitCommitment>,
     /// Aggregated commitment to the parties' bits
-    A: RistrettoPoint,
+    A: AffinePoint,
     /// Aggregated commitment to the parties' bit blindings
-    S: RistrettoPoint,
+    S: AffinePoint,
 }
 
 impl<'a, 'b> DealerAwaitingPolyCommitments<'a, 'b> {
@@ -166,8 +165,8 @@ impl<'a, 'b> DealerAwaitingPolyCommitments<'a, 'b> {
         }
 
         // Commit sums of T_1_j's and T_2_j's
-        let T_1: RistrettoPoint = poly_commitments.iter().map(|pc| pc.T_1_j).sum();
-        let T_2: RistrettoPoint = poly_commitments.iter().map(|pc| pc.T_2_j).sum();
+        let T_1: AffinePoint = poly_commitments.iter().map(|pc| pc.T_1_j).sum();
+        let T_2: AffinePoint = poly_commitments.iter().map(|pc| pc.T_2_j).sum();
 
         self.transcript.append_point(b"T_1", &T_1.compress());
         self.transcript.append_point(b"T_2", &T_2.compress());
@@ -211,10 +210,10 @@ pub struct DealerAwaitingProofShares<'a, 'b> {
     bit_commitments: Vec<BitCommitment>,
     poly_challenge: PolyChallenge,
     poly_commitments: Vec<PolyCommitment>,
-    A: RistrettoPoint,
-    S: RistrettoPoint,
-    T_1: RistrettoPoint,
-    T_2: RistrettoPoint,
+    A: AffinePoint,
+    S: AffinePoint,
+    T_1: AffinePoint,
+    T_2: AffinePoint,
 }
 
 impl<'a, 'b> DealerAwaitingProofShares<'a, 'b> {
@@ -253,7 +252,7 @@ impl<'a, 'b> DealerAwaitingProofShares<'a, 'b> {
 
         // Get a challenge value to combine statements for the IPP
         let w = self.transcript.challenge_scalar(b"w");
-        let Q = w * self.pc_gens.B;
+        let Q = crate::secp256k1_impl::multiscalar_mul(&[w], &[self.pc_gens.B]);
 
         let G_factors: Vec<Scalar> = iter::repeat(Scalar::ONE).take(self.n * self.m).collect();
         let H_factors: Vec<Scalar> = util::exp_iter(self.bit_challenge.y.invert())
@@ -281,10 +280,10 @@ impl<'a, 'b> DealerAwaitingProofShares<'a, 'b> {
         );
 
         Ok(RangeProof {
-            A: self.A.compress(),
-            S: self.S.compress(),
-            T_1: self.T_1.compress(),
-            T_2: self.T_2.compress(),
+            A: self.A,
+            S: self.S,
+            T_1: self.T_1,
+            T_2: self.T_2,
             t_x,
             t_x_blinding,
             e_blinding,

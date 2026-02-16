@@ -19,7 +19,7 @@ edition = "2021"
 resolver = "2"
 
 [dependencies]
-curve25519-dalek = { version = "4.0.0-pre.5", default-features = true, features = ["alloc", "serde", "digest", "rand_core", "legacy_compatibility"] }
+# curve25519-dalek = { version = "4.0.0-pre.5", default-features = true, features = ["alloc", "serde", "digest", "rand_core", "legacy_compatibility"] }
 subtle = { version = "2", default-features = false }
 sha3 = { version = "0.10", default-features = false }
 digest = { version = "0.10", default-features = false }
@@ -31,6 +31,7 @@ serde_derive = { version = "1", default-features = false }
 thiserror = { version = "1", optional = true }
 merlin = { version = "3", default-features = false }
 clear_on_drop = "0.2.5"
+k256 = { version = "0.13.4", features = ["arithmetic", "serde"] }
 
 [dev-dependencies]
 hex = "0.3"

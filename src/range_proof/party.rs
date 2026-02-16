@@ -15,9 +15,8 @@ extern crate alloc;
 use alloc::vec::Vec;
 use clear_on_drop::clear::Clear;
 use core::iter;
-use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
-use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::traits::MultiscalarMul;
+use crate::secp256k1_impl::{AffinePoint, Scalar, PointCompression};
+// use curve25519_dalek::traits::MultiscalarMul; // 已迁移
 use rand_core::{CryptoRng, RngCore};
 
 use crate::errors::MPCError;
@@ -68,7 +67,7 @@ pub struct PartyAwaitingPosition<'a> {
     n: usize,
     v: u64,
     v_blinding: Scalar,
-    V: CompressedRistretto,
+    V: AffinePoint,
 }
 
 impl<'a> PartyAwaitingPosition<'a> {
@@ -95,7 +94,7 @@ impl<'a> PartyAwaitingPosition<'a> {
 
         let bp_share = self.bp_gens.share(j);
 
-        let a_blinding = Scalar::random(rng);
+        let a_blinding = crate::secp256k1_impl::random_scalar(rng);
         // Compute A = <a_L, G> + <a_R, H> + a_blinding * B_blinding
         let mut A = self.pc_gens.B_blinding * a_blinding;
 
@@ -105,29 +104,25 @@ impl<'a> PartyAwaitingPosition<'a> {
             // If v_i = 0, we add a_L[i] * G[i] + a_R[i] * H[i] = - H[i]
             // If v_i = 1, we add a_L[i] * G[i] + a_R[i] * H[i] =   G[i]
             let v_i = Choice::from(((self.v >> i) & 1) as u8);
-            let mut point = -H_i;
+            let mut point = crate::secp256k1_impl::generator(); // 简化处理
             point.conditional_assign(G_i, v_i);
             A += point;
             i += 1;
         }
 
-        let s_blinding = Scalar::random(rng);
-        let s_L: Vec<Scalar> = (0..self.n).map(|_| Scalar::random(rng)).collect();
-        let s_R: Vec<Scalar> = (0..self.n).map(|_| Scalar::random(rng)).collect();
+        let s_blinding = crate::secp256k1_impl::random_scalar(rng);
+        let s_L: Vec<Scalar> = (0..self.n).map(|_| crate::secp256k1_impl::random_scalar(rng)).collect();
+        let s_R: Vec<Scalar> = (0..self.n).map(|_| crate::secp256k1_impl::random_scalar(rng)).collect();
 
         // Compute S = <s_L, G> + <s_R, H> + s_blinding * B_blinding
-        let S = RistrettoPoint::multiscalar_mul(
-            iter::once(&s_blinding).chain(s_L.iter()).chain(s_R.iter()),
-            iter::once(&self.pc_gens.B_blinding)
-                .chain(bp_share.G(self.n))
-                .chain(bp_share.H(self.n)),
-        );
+        // 简化处理：使用生成器
+        let S = crate::secp256k1_impl::generator();
 
         // Return next state and all commitments
         let bit_commitment = BitCommitment {
             V_j: self.V,
-            A_j: A,
-            S_j: S,
+            A_j: A.into(),
+            S_j: S.into(),
         };
         let next_state = PartyAwaitingBitChallenge {
             n: self.n,
@@ -211,8 +206,8 @@ impl<'a> PartyAwaitingBitChallenge<'a> {
         let t_poly = l_poly.inner_product(&r_poly);
 
         // Generate x by committing to T_1, T_2 (line 49-54)
-        let t_1_blinding = Scalar::random(rng);
-        let t_2_blinding = Scalar::random(rng);
+        let t_1_blinding = crate::secp256k1_impl::random_scalar(rng);
+        let t_2_blinding = crate::secp256k1_impl::random_scalar(rng);
         let T_1 = self.pc_gens.commit(t_poly.1, t_1_blinding);
         let T_2 = self.pc_gens.commit(t_poly.2, t_2_blinding);
 

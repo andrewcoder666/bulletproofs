@@ -6,7 +6,7 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 use clear_on_drop::clear::Clear;
-use curve25519_dalek::scalar::Scalar;
+use crate::secp256k1_impl::Scalar;
 
 use crate::inner_product_proof::inner_product;
 
@@ -61,9 +61,8 @@ impl Iterator for ScalarExp {
 }
 
 /// Return an iterator of the powers of `x`.
-pub fn exp_iter(x: Scalar) -> ScalarExp {
-    let next_exp_x = Scalar::ONE;
-    ScalarExp { x, next_exp_x }
+pub fn exp_iter(x: Scalar) -> impl Iterator<Item = Scalar> {
+    std::iter::successors(Some(Scalar::ONE), move |prev| Some(*prev * x))
 }
 
 pub fn add_vec(a: &[Scalar], b: &[Scalar]) -> Vec<Scalar> {
@@ -309,9 +308,7 @@ mod tests {
 
     #[test]
     fn test_scalar_exp() {
-        let x = Scalar::from_bits(
-            *b"\x84\xfc\xbcOx\x12\xa0\x06\xd7\x91\xd9z:'\xdd\x1e!CE\xf7\xb1\xb9Vz\x810sD\x96\x85\xb5\x07",
-        );
+        let x = Scalar::from(12345u64); // 使用简单的数值替代
         assert_eq!(scalar_exp_vartime(&x, 0), Scalar::ONE);
         assert_eq!(scalar_exp_vartime(&x, 1), x);
         assert_eq!(scalar_exp_vartime(&x, 2), x * x);
